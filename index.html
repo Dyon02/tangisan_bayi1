@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baby Cry Classification System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-dark: #1245b0;
+      --accent: #0ea5e9;
+      --surface: #f8fafc;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --success: #059669;
+      --warning: #d97706;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 0.875rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .topbar-brand {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      color: var(--primary);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+    .topbar-brand span { color: var(--text); }
+    .status-pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      border-radius: 100px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .status-pill.loading { background: #fef3c7; color: #92400e; }
+    .status-pill.ready   { background: #d1fae5; color: #065f46; }
+    .status-pill.error   { background: #fee2e2; color: #991b1b; }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .status-pill.loading .status-dot { background: #d97706; }
+    .status-pill.ready   .status-dot { background: #059669; animation: none; }
+    .status-pill.error   .status-dot { background: #dc2626; animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* Layout */
+    .main-content { padding: 2rem 0 4rem; }
+
+    /* Step cards */
+    .step-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+      transition: box-shadow 0.2s;
+    }
+    .step-card.active { box-shadow: 0 0 0 2px var(--primary), 0 4px 16px rgba(26,86,219,0.1); }
+    .step-card.disabled { opacity: 0.55; pointer-events: none; }
+
+    .step-header {
+      padding: 1rem 1.25rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .step-number {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .step-card.active .step-number { background: var(--primary); color: #fff; }
+    .step-card.done .step-number { background: var(--success); color: #fff; }
+    .step-title {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+    .step-body { padding: 1.25rem; }
+
+    /* Upload / Mic zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      background: var(--surface);
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--primary); background: #eff6ff; }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-icon {
+      width: 48px; height: 48px;
+      border-radius: 10px;
+      background: #dbeafe;
+      color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      margin: 0 auto 0.75rem;
+    }
+    .upload-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+    }
+    .upload-hint .badge-format {
+      display: inline-block;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin: 0.1rem;
+    }
+
+    /* Alert info */
+    .audio-alert {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.82rem;
+      color: #92400e;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    /* Mic button */
+    .btn-mic {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 1.4rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(26,86,219,0.3);
+    }
+    .btn-mic:hover { background: var(--primary-dark); transform: scale(1.05); }
+    .btn-mic.recording { background: #dc2626; animation: micPulse 1s ease-in-out infinite; }
+    @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.4)} 50%{box-shadow:0 0 0 10px rgba(220,38,38,0)} }
+
+    /* Waveform */
+    #waveform-canvas {
+      width: 100%;
+      height: 64px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    audio#audio-preview { width: 100%; border-radius: 8px; display: none; margin-top: 0.75rem; }
+
+    /* Model selector */
+    .model-option {
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      background: #fff;
+    }
+    .model-option:hover { border-color: var(--accent); }
+    .model-option.selected { border-color: var(--primary); background: #eff6ff; }
+    .model-option input { position: absolute; opacity: 0; }
+    .model-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .model-badge.recommended { background: #d1fae5; color: #065f46; }
+    .model-badge.standard    { background: #f1f5f9; color: var(--muted); }
+    .model-name {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 0.4rem 0 0.2rem;
+    }
+    .model-desc { font-size: 0.8rem; color: var(--muted); }
+    .model-check {
+      position: absolute;
+      top: 0.75rem; right: 0.75rem;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.65rem;
+      display: none;
+      align-items: center; justify-content: center;
+    }
+    .model-option.selected .model-check { display: flex; }
+
+    /* Analyze button */
+    .btn-analyze {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      width: 100%;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .btn-analyze:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Result panel */
+    #result-section { display: none; }
+
+    .result-header-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .result-icon-box {
+      width: 64px; height: 64px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem;
+      flex-shrink: 0;
+    }
+    .result-label-name {
+      font-family: 'Manrope', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .result-confidence { font-size: 0.9rem; opacity: 0.85; margin-top: 0.2rem; }
+    .result-model-used { font-size: 0.78rem; opacity: 0.7; margin-top: 0.1rem; }
+
+    /* Probability bars */
+    .prob-row { margin-bottom: 0.8rem; }
+    .prob-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+    }
+    .prob-pct { color: var(--muted); font-size: 0.82rem; }
+    .prob-bar-bg {
+      height: 10px;
+      background: #f1f5f9;
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    .prob-row.top-result .prob-bar-fill { background: var(--primary); }
+    .prob-row:not(.top-result) .prob-bar-fill { background: #93c5fd; }
+
+    /* Info card */
+    .info-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    .info-card h6 {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 700;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.85rem;
+    }
+    .tip-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+      color: var(--text);
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .tip-item:last-child { border-bottom: none; }
+    .tip-item i { color: var(--success); margin-top: 1px; flex-shrink: 0; }
+
+    /* Spectrogram */
+    #spec-canvas {
+      width: 100%;
+      height: 120px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    /* Loading overlay */
+    .analyzing-overlay {
+      display: none;
+      padding: 2.5rem 1rem;
+      text-align: center;
+    }
+    .spinner-ring {
+      width: 48px; height: 48px;
+      border: 4px solid #e2e8f0;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Footer */
+    footer {
+      background: #fff;
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 0;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 768px) {
+      .result-label-name { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<nav class="topbar">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between">
+      <a class="topbar-brand" href="#">
+        Baby<span>Cry</span> Classifier
+      </a>
+      <div id="model-status-pill" class="status-pill loading">
+        <span class="status-dot"></span>
+        <span id="status-text">Memuat model...</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="main-content">
+  <div class="container" style="max-width:860px">
+
+    <!-- Page header -->
+    <div class="mb-4">
+      <h1 class="fw-bold mb-1" style="font-family:'Manrope',sans-serif;font-size:1.6rem;letter-spacing:-0.02em">
+        Klasifikasi Tangisan Bayi
+      </h1>
+      <p class="text-secondary mb-0" style="font-size:0.9rem">
+        Unggah atau rekam suara tangisan bayi, pilih model klasifikasi, dan dapatkan hasil analisis secara instan.
+      </p>
+    </div>
+
+    <!-- Step 1: Input Audio -->
+    <div class="step-card active" id="step1">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <div class="step-title">Input Suara Tangisan Bayi</div>
+      </div>
+      <div class="step-body">
+
+        <!-- Alert hint -->
+        <div class="audio-alert mb-3">
+          <i class="bi bi-info-circle-fill" style="margin-top:1px;flex-shrink:0"></i>
+          <span>
+            Pastikan audio yang diinput adalah <strong>suara tangisan bayi</strong>, bukan suara lain.
+            Rekaman yang jernih dengan durasi <strong>minimal 3 detik</strong> memberikan hasil terbaik.
+          </span>
+        </div>
+
+        <div class="row g-3">
+          <!-- Upload file -->
+          <div class="col-md-7">
+            <p class="fw-600 mb-2" style="font-size:0.85rem;font-weight:600">Unggah File Audio</p>
+            <div class="upload-zone" id="dropzone">
+              <input type="file" id="file-input" accept=".wav,.mp3,.ogg,.flac,.m4a,.webm" />
+              <div class="upload-icon"><i class="bi bi-upload"></i></div>
+              <div class="fw-semibold mb-1" style="font-size:0.9rem">Klik atau seret file ke sini</div>
+              <div class="upload-hint">
+                Format yang didukung:
+                <span class="badge-format">WAV</span>
+                <span class="badge-format">MP3</span>
+                <span class="badge-format">OGG</span>
+                <span class="badge-format">FLAC</span>
+                <span class="badge-format">M4A</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="col-md-1 d-flex align-items-center justify-content-center">
+            <div class="text-muted fw-semibold" style="font-size:0.8rem">ATAU</div>
+          </div>
+
+          <!-- Microphone -->
+          <div class="col-md-4 d-flex flex-column align-items-center justify-content-center text-center gap-2">
+            <p class="fw-600 mb-2" style="font-size:0.85rem;font-weight:600">Rekam Langsung</p>
+            <button class="btn-mic" id="mic-btn" title="Rekam Audio">
+              <i class="bi bi-mic-fill" id="mic-icon"></i>
+            </button>
+            <div id="rec-timer" class="text-muted" style="font-size:0.82rem;min-height:1.2rem"></div>
+            <div id="rec-status" class="text-muted" style="font-size:0.8rem">Klik untuk mulai merekam</div>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div id="audio-preview-section" class="mt-3" style="display:none">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="fw-semibold" style="font-size:0.85rem">
+              <i class="bi bi-file-earmark-music text-primary me-1"></i>
+              <span id="file-name-display">audio.wav</span>
+            </span>
+            <button class="btn btn-sm btn-outline-secondary" id="clear-audio-btn" style="font-size:0.78rem;padding:0.2rem 0.6rem">
+              <i class="bi bi-x me-1"></i>Hapus
+            </button>
+          </div>
+          <canvas id="waveform-canvas"></canvas>
+          <audio id="audio-preview" controls></audio>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Step 2: Model Selection -->
+    <div class="step-card disabled" id="step2">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <div class="step-title">Pilih Model Klasifikasi</div>
+      </div>
+      <div class="step-body">
+        <div class="row g-3" id="model-grid">
+
+          <div class="col-md-4">
+            <label class="model-option w-100" id="opt-cnn-lstm">
+              <input type="radio" name="model" value="cnn_lstm" checked />
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="model-badge recommended">Disarankan</span>
+                <div class="model-check"><i class="bi bi-check"></i></div>
+              </div>
+              <div class="model-name">CNN + LSTM</div>
+              <div class="model-desc">Arsitektur hybrid CNN-BiLSTM. Terbaik untuk menangkap pola spasial dan temporal dari tangisan bayi secara bersamaan.</div>
+            </label>
+          </div>
+
+          <div class="col-md-4">
+            <label class="model-option w-100" id="opt-cnn">
+              <input type="radio" name="model" value="cnn" />
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="model-badge standard">Standard</span>
+                <div class="model-check"><i class="bi bi-check"></i></div>
+              </div>
+              <div class="model-name">CNN</div>
+              <div class="model-desc">Convolutional Neural Network. Handal dalam mengekstrak fitur lokal dari mel-spectrogram audio.</div>
+            </label>
+          </div>
+
+          <div class="col-md-4">
+            <label class="model-option w-100" id="opt-rnn">
+              <input type="radio" name="model" value="rnn" />
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="model-badge standard">Standard</span>
+                <div class="model-check"><i class="bi bi-check"></i></div>
+              </div>
+              <div class="model-name">RNN</div>
+              <div class="model-desc">Recurrent Neural Network (BiLSTM). Fokus pada urutan temporal dalam sinyal audio tangisan bayi.</div>
+            </label>
+          </div>
+
+        </div>
+
+        <div class="mt-3">
+          <button class="btn-analyze" id="analyze-btn" disabled>
+            <i class="bi bi-cpu"></i>
+            Mulai Klasifikasi
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Result -->
+    <div class="step-card disabled" id="step3">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <div class="step-title">Hasil Klasifikasi</div>
+      </div>
+      <div class="step-body">
+
+        <!-- Analyzing -->
+        <div class="analyzing-overlay" id="analyzing-overlay">
+          <div class="spinner-ring"></div>
+          <div class="fw-semibold mb-1">Menganalisis audio...</div>
+          <div class="text-muted" style="font-size:0.83rem">Proses membutuhkan beberapa detik</div>
+        </div>
+
+        <!-- Result content -->
+        <div id="result-content" style="display:none">
+
+          <!-- Top result -->
+          <div class="result-header-card" id="result-header">
+            <div class="result-icon-box" id="result-icon">?</div>
+            <div>
+              <div class="result-label-name" id="result-name">-</div>
+              <div class="result-confidence" id="result-conf">-</div>
+              <div class="result-model-used" id="result-model">-</div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <!-- Probability breakdown -->
+            <div class="col-md-7">
+              <div class="info-card">
+                <h6><i class="bi bi-bar-chart-line me-2"></i>Distribusi Probabilitas</h6>
+                <div id="prob-bars"></div>
+              </div>
+            </div>
+
+            <!-- Tips & Spectrogram -->
+            <div class="col-md-5">
+              <div class="info-card mb-3">
+                <h6><i class="bi bi-lightbulb me-2"></i>Rekomendasi</h6>
+                <div id="tips-content"></div>
+              </div>
+              <div class="info-card">
+                <h6><i class="bi bi-soundwave me-2"></i>Mel Spectrogram</h6>
+                <canvas id="spec-canvas"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <button class="btn btn-outline-primary w-100" id="reset-btn" style="font-size:0.9rem;padding:0.6rem">
+              <i class="bi bi-arrow-counterclockwise me-2"></i>Analisis Ulang
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Placeholder -->
+        <div id="result-placeholder" class="text-center py-4 text-muted" style="font-size:0.88rem">
+          <i class="bi bi-hourglass" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4"></i>
+          Hasil klasifikasi akan ditampilkan di sini
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    Baby Cry Classification System &mdash; Powered by TensorFlow.js &middot; CNN | RNN | CNN-LSTM
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const SR = 22050, DURATION = 5.0, N_MELS = 128, N_FFT = 2048, HOP = 512, N_FRAMES = 216;
+const LABELS = ["belly_pain", "burping", "discomfort", "hungry", "tired"];
+
+const CLASS_INFO = {
+  belly_pain: {
+    label: "Sakit Perut",
+    icon: "bi-emoji-dizzy",
+    desc: "Bayi kemungkinan mengalami kolik atau gas di perutnya.",
+    tips: ["Pijat perut bayi dengan gerakan melingkar searah jarum jam", "Gendong dengan posisi tengkurap di lengan Anda", "Konsultasikan ke dokter jika terjadi berulang"]
+  },
+  burping: {
+    label: "Ingin Bersendawa",
+    icon: "bi-wind",
+    desc: "Bayi perlu dibantu mengeluarkan udara setelah menyusu.",
+    tips: ["Tegakkan bayi dan tepuk punggungnya perlahan", "Gunakan posisi over-the-shoulder", "Lakukan setiap 5-10 menit saat menyusu"]
+  },
+  discomfort: {
+    label: "Tidak Nyaman",
+    icon: "bi-emoji-frown",
+    desc: "Bayi merasa tidak nyaman, mungkin karena popok, suhu, atau posisi.",
+    tips: ["Periksa dan ganti popok jika basah atau kotor", "Pastikan suhu ruangan 20-22 derajat Celsius", "Sesuaikan pakaian agar tidak terlalu ketat atau longgar"]
+  },
+  hungry: {
+    label: "Lapar",
+    icon: "bi-droplet-fill",
+    desc: "Bayi membutuhkan makanan atau ASI segera.",
+    tips: ["Segera berikan ASI atau susu formula", "Perhatikan tanda lapar lebih awal sebelum menangis keras", "Bayi baru lahir perlu disusui setiap 2-3 jam"]
+  },
+  tired: {
+    label: "Mengantuk",
+    icon: "bi-moon-stars-fill",
+    desc: "Bayi kelelahan dan membutuhkan istirahat.",
+    tips: ["Bawa ke tempat tidur yang nyaman dan tenang", "Redupkan pencahayaan dan minimalkan kebisingan", "Coba nyanyikan lagu atau gunakan white noise"]
+  }
+};
+
+const MODEL_PATHS = {
+  cnn_lstm: 'models/cnn_lstm/model.json',
+  cnn:      'models/cnn/model.json',
+  rnn:      'models/rnn/model.json',
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let loadedModels = {};
+let audioBuffer = null;
+let selectedModel = 'cnn_lstm';
+let mediaRecorder = null;
+let recordedChunks = [];
+let recTimerInterval = null;
+let recSeconds = 0;
+
+// ─── Model Loading ────────────────────────────────────────────────────────────
+const statusPill = document.getElementById('model-status-pill');
+const statusText = document.getElementById('status-text');
+
+async function loadAllModels() {
+  statusPill.className = 'status-pill loading';
+  statusText.textContent = 'Memuat model...';
+  let loadedCount = 0;
+  const keys = Object.keys(MODEL_PATHS);
+  for (const key of keys) {
+    try {
+      loadedModels[key] = await tf.loadLayersModel(MODEL_PATHS[key]);
+      loadedCount++;
+      statusText.textContent = `Memuat model... ${loadedCount}/${keys.length}`;
+    } catch(e) {
+      console.error(`Failed to load ${key}:`, e);
+    }
+  }
+  if (loadedCount === keys.length) {
+    statusPill.className = 'status-pill ready';
+    statusText.textContent = 'Semua model siap';
+  } else if (loadedCount > 0) {
+    statusPill.className = 'status-pill ready';
+    statusText.textContent = `${loadedCount}/${keys.length} model siap`;
+  } else {
+    statusPill.className = 'status-pill error';
+    statusText.textContent = 'Gagal memuat model';
+  }
+}
+loadAllModels();
+
+// ─── Model selector UI ────────────────────────────────────────────────────────
+document.querySelectorAll('input[name="model"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    selectedModel = radio.value;
+    document.querySelectorAll('.model-option').forEach(el => el.classList.remove('selected'));
+    radio.closest('.model-option').classList.add('selected');
+  });
+});
+// Default selected
+document.getElementById('opt-cnn-lstm').classList.add('selected');
+
+// ─── File upload ──────────────────────────────────────────────────────────────
+const fileInput = document.getElementById('file-input');
+const dropzone  = document.getElementById('dropzone');
+
+fileInput.addEventListener('change', e => {
+  if(e.target.files[0]) handleAudioFile(e.target.files[0]);
+});
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files[0]) handleAudioFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('clear-audio-btn').addEventListener('click', clearAudio);
+
+async function handleAudioFile(file) {
+  const url = URL.createObjectURL(file);
+  document.getElementById('file-name-display').textContent = file.name;
+  document.getElementById('audio-preview').src = url;
+  document.getElementById('audio-preview').style.display = 'block';
+  document.getElementById('audio-preview-section').style.display = 'block';
+  const ctx = new AudioContext();
+  const arrBuf = await file.arrayBuffer();
+  audioBuffer = await ctx.decodeAudioData(arrBuf);
+  drawWaveform(audioBuffer);
+  drawSpectrogram(audioBuffer);
+  enableStep2();
+}
+
+function clearAudio() {
+  audioBuffer = null;
+  document.getElementById('audio-preview').src = '';
+  document.getElementById('audio-preview').style.display = 'none';
+  document.getElementById('audio-preview-section').style.display = 'none';
+  document.getElementById('waveform-canvas').style.display = 'none';
+  fileInput.value = '';
+  disableStep2();
+  hideStep3();
+}
+
+// ─── Microphone recording ─────────────────────────────────────────────────────
+const micBtn = document.getElementById('mic-btn');
+micBtn.addEventListener('click', toggleRecording);
+
+async function toggleRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+      const file = new File([blob], 'rekaman.webm', { type: 'audio/webm' });
+      handleAudioFile(file);
+      stream.getTracks().forEach(t => t.stop());
+    };
+    mediaRecorder.start();
+    micBtn.classList.add('recording');
+    document.getElementById('mic-icon').className = 'bi bi-stop-fill';
+    document.getElementById('rec-status').textContent = 'Merekam... klik untuk berhenti';
+    recSeconds = 0;
+    recTimerInterval = setInterval(() => {
+      recSeconds++;
+      const m = String(Math.floor(recSeconds/60)).padStart(2,'0');
+      const s = String(recSeconds%60).padStart(2,'0');
+      document.getElementById('rec-timer').textContent = `${m}:${s}`;
+    }, 1000);
+  } catch(e) {
+    alert('Tidak dapat mengakses mikrofon. Pastikan izin diberikan.');
+  }
+}
+
+function stopRecording() {
+  if(mediaRecorder) mediaRecorder.stop();
+  clearInterval(recTimerInterval);
+  micBtn.classList.remove('recording');
+  document.getElementById('mic-icon').className = 'bi bi-mic-fill';
+  document.getElementById('rec-status').textContent = 'Klik untuk mulai merekam';
+  document.getElementById('rec-timer').textContent = '';
+}
+
+// ─── Waveform drawing ─────────────────────────────────────────────────────────
+function drawWaveform(buf) {
+  const canvas = document.getElementById('waveform-canvas');
+  canvas.style.display = 'block';
+  const W = canvas.offsetWidth || 600, H = 64;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const data = buf.getChannelData(0);
+  const step = Math.ceil(data.length / W);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#1a56db';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for (let i = 0; i < W; i++) {
+    let max = 0;
+    for (let j = 0; j < step; j++) {
+      const v = Math.abs(data[i * step + j] || 0);
+      if (v > max) max = v;
+    }
+    const y = (1 - max) * H / 2;
+    i === 0 ? ctx.moveTo(i, y) : ctx.lineTo(i, y);
+  }
+  ctx.stroke();
+  // Mirror
+  ctx.beginPath();
+  for (let i = 0; i < W; i++) {
+    let max = 0;
+    for (let j = 0; j < step; j++) {
+      const v = Math.abs(data[i * step + j] || 0);
+      if (v > max) max = v;
+    }
+    const y = H - (1 - max) * H / 2;
+    i === 0 ? ctx.moveTo(i, y) : ctx.lineTo(i, y);
+  }
+  ctx.stroke();
+}
+
+// ─── Spectrogram drawing ──────────────────────────────────────────────────────
+function drawSpectrogram(buf) {
+  const canvas = document.getElementById('spec-canvas');
+  const W = 400, H = 120;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const data = buf.getChannelData(0);
+  const fftSize = 512, hop = 128;
+  const numF = Math.floor((data.length - fftSize) / hop);
+  const img = ctx.createImageData(Math.min(numF, W), H);
+
+  function magmaColor(v) {
+    v = Math.max(0, Math.min(1, v));
+    const r = v < 0.5 ? Math.round(28 + v*2*152) : Math.round(180 + (v-0.5)*2*72);
+    const g = v < 0.4 ? 0 : v < 0.8 ? Math.round((v-0.4)/0.4*180) : Math.round(180 + (v-0.8)/0.2*75);
+    const b = v < 0.3 ? Math.round(80 + v/0.3*100) : Math.round(180 - (v-0.3)/0.7*160);
+    return [r, g, Math.max(0,b)];
+  }
+
+  for (let f = 0; f < Math.min(numF, W); f++) {
+    const start = f * hop;
+    const slice = data.slice(start, start + fftSize);
+    const mag = new Float32Array(fftSize / 2);
+    for (let k = 0; k < fftSize / 2; k++) {
+      let re = 0, im = 0;
+      for (let n = 0; n < fftSize; n++) {
+        const w = 0.5 - 0.5 * Math.cos(2 * Math.PI * n / fftSize);
+        const a = -2 * Math.PI * k * n / fftSize;
+        re += (slice[n] || 0) * w * Math.cos(a);
+        im += (slice[n] || 0) * w * Math.sin(a);
+      }
+      mag[k] = Math.log1p(Math.sqrt(re*re + im*im));
+    }
+    const maxM = Math.max(...mag) || 1;
+    for (let b = 0; b < H; b++) {
+      const bin = Math.floor((H - 1 - b) / (H - 1) * (fftSize / 2 - 1));
+      const v = mag[bin] / maxM;
+      const [r, g, bl] = magmaColor(v);
+      const idx = (b * Math.min(numF, W) + f) * 4;
+      img.data[idx] = r; img.data[idx+1] = g; img.data[idx+2] = bl; img.data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ─── Audio preprocessing for model ───────────────────────────────────────────
+function audioToMelSpectrogram(buf) {
+  const rawData = buf.getChannelData(0);
+  const targetLen = Math.round(SR * DURATION);
+  const y = new Float32Array(targetLen);
+  const ratio = rawData.length / targetLen;
+  for (let i = 0; i < targetLen; i++) {
+    y[i] = rawData[Math.min(Math.floor(i * ratio), rawData.length - 1)] || 0;
+  }
+
+  // STFT
+  const frames = [];
+  for (let s = 0; s + N_FFT <= targetLen; s += HOP) {
+    const frame = new Float32Array(N_FFT);
+    for (let i = 0; i < N_FFT; i++) {
+      const win = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N_FFT - 1));
+      frame[i] = y[s + i] * win;
+    }
+    const mag = new Float32Array(N_FFT / 2 + 1);
+    for (let k = 0; k <= N_FFT / 2; k++) {
+      let re = 0, im = 0;
+      for (let n = 0; n < N_FFT; n++) {
+        const a = -2 * Math.PI * k * n / N_FFT;
+        re += frame[n] * Math.cos(a);
+        im += frame[n] * Math.sin(a);
+      }
+      mag[k] = re * re + im * im;
+    }
+    frames.push(mag);
+  }
+
+  // Mel filterbank
+  function hzToMel(f) { return 2595 * Math.log10(1 + f / 700); }
+  function melToHz(m) { return 700 * (Math.pow(10, m / 2595) - 1); }
+  const melMin = hzToMel(0), melMax = hzToMel(SR / 2);
+  const melPts = Array.from({length: N_MELS + 2}, (_, i) => melMin + (melMax - melMin) * i / (N_MELS + 1));
+  const binPts = melPts.map(m => Math.floor(melToHz(m) / SR * N_FFT));
+
+  const melSpec = frames.map(frame => {
+    const mel = new Float32Array(N_MELS);
+    for (let m = 0; m < N_MELS; m++) {
+      let s = 0;
+      const lo = binPts[m], mid = binPts[m+1], hi = binPts[m+2];
+      for (let b = lo; b < hi; b++) {
+        if (b < 0 || b >= frame.length) continue;
+        const w = b < mid ? (b - lo) / (mid - lo + 1e-8) : (hi - b) / (hi - mid + 1e-8);
+        s += frame[b] * w;
+      }
+      mel[m] = Math.max(s, 1e-10);
+    }
+    return mel;
+  });
+
+  // Power to dB
+  melSpec.forEach(row => { for (let i = 0; i < row.length; i++) row[i] = 10 * Math.log10(row[i]); });
+
+  // Pad/trim
+  while (melSpec.length < N_FRAMES) melSpec.push(new Float32Array(N_MELS));
+  melSpec.splice(N_FRAMES);
+
+  // Normalize
+  let mn = Infinity, mx = -Infinity;
+  melSpec.forEach(row => row.forEach(v => { if(v<mn)mn=v; if(v>mx)mx=v; }));
+  const rng = mx - mn + 1e-8;
+
+  return { melSpec, mn, mx, rng };
+}
+
+// ─── Predict ──────────────────────────────────────────────────────────────────
+async function analyze() {
+  if (!audioBuffer) return;
+  const model = loadedModels[selectedModel];
+  if (!model) { alert(`Model ${selectedModel} belum siap.`); return; }
+
+  document.getElementById('analyze-btn').disabled = true;
+  showStep3Loading();
+
+  await new Promise(r => setTimeout(r, 60));
+
+  try {
+    const { melSpec, mn, rng } = audioToMelSpectrogram(audioBuffer);
+
+    let tensor;
+    if (selectedModel === 'cnn_lstm') {
+      // Input: (1, 216, 128, 1)
+      const flat = new Float32Array(N_FRAMES * N_MELS);
+      for (let t = 0; t < N_FRAMES; t++) for (let m = 0; m < N_MELS; m++) flat[t*N_MELS+m] = (melSpec[t][m]-mn)/rng;
+      tensor = tf.tensor4d(flat, [1, N_FRAMES, N_MELS, 1]);
+    } else if (selectedModel === 'cnn') {
+      // Input: (1, 128, 216, 1)
+      const flat = new Float32Array(N_MELS * N_FRAMES);
+      for (let m = 0; m < N_MELS; m++) for (let t = 0; t < N_FRAMES; t++) flat[m*N_FRAMES+t] = (melSpec[t][m]-mn)/rng;
+      tensor = tf.tensor4d(flat, [1, N_MELS, N_FRAMES, 1]);
+    } else {
+      // RNN Input: (1, 216, 128)
+      const flat = new Float32Array(N_FRAMES * N_MELS);
+      for (let t = 0; t < N_FRAMES; t++) for (let m = 0; m < N_MELS; m++) flat[t*N_MELS+m] = (melSpec[t][m]-mn)/rng;
+      tensor = tf.tensor3d(flat, [1, N_FRAMES, N_MELS]);
+    }
+
+    const pred = model.predict(tensor);
+    const probs = await pred.data();
+    tensor.dispose(); pred.dispose();
+
+    showResult(probs);
+  } catch(e) {
+    console.error(e);
+    alert('Terjadi kesalahan saat analisis: ' + e.message);
+    showStep3Placeholder();
+  }
+
+  document.getElementById('analyze-btn').disabled = false;
+}
+
+// ─── Result rendering ──────────────────────────────────────────────────────────
+function showResult(probs) {
+  const topIdx = Array.from(probs).indexOf(Math.max(...probs));
+  const label = LABELS[topIdx];
+  const info = CLASS_INFO[label];
+  const conf = (probs[topIdx] * 100).toFixed(1);
+  const modelName = { cnn_lstm: 'CNN + LSTM', cnn: 'CNN', rnn: 'RNN' }[selectedModel];
+
+  document.getElementById('result-icon').innerHTML = `<i class="bi ${info.icon}"></i>`;
+  document.getElementById('result-name').textContent = info.label;
+  document.getElementById('result-conf').textContent = `Tingkat keyakinan: ${conf}%`;
+  document.getElementById('result-model').textContent = `Model yang digunakan: ${modelName}`;
+
+  // Probability bars
+  const sorted = LABELS.map((l, i) => ({ label: l, prob: probs[i] })).sort((a,b) => b.prob - a.prob);
+  const barsHtml = sorted.map((item, rank) => {
+    const pct = (item.prob * 100).toFixed(1);
+    const isTop = rank === 0;
+    return `
+      <div class="prob-row ${isTop ? 'top-result' : ''}">
+        <div class="prob-label">
+          <span class="fw-semibold">${CLASS_INFO[item.label].label}</span>
+          <span class="prob-pct">${pct}%</span>
+        </div>
+        <div class="prob-bar-bg">
+          <div class="prob-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+  }).join('');
+  document.getElementById('prob-bars').innerHTML = barsHtml;
+
+  // Tips
+  const tipsHtml = info.tips.map(t => `
+    <div class="tip-item"><i class="bi bi-check-circle-fill"></i><span>${t}</span></div>
+  `).join('') + `<div class="tip-item mt-2" style="border:none;color:var(--muted);font-size:0.8rem">
+    <i class="bi bi-exclamation-circle" style="color:var(--warning)"></i>
+    <span>${info.desc}</span>
+  </div>`;
+  document.getElementById('tips-content').innerHTML = tipsHtml;
+
+  // Show result
+  document.getElementById('analyzing-overlay').style.display = 'none';
+  document.getElementById('result-content').style.display = 'block';
+  document.getElementById('result-placeholder').style.display = 'none';
+  document.getElementById('step3').classList.remove('disabled');
+  document.getElementById('step3').classList.add('active');
+  document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ─── Step management ──────────────────────────────────────────────────────────
+function enableStep2() {
+  document.getElementById('step2').classList.remove('disabled');
+  document.getElementById('step2').classList.add('active');
+  document.getElementById('step1').classList.remove('active');
+  document.getElementById('step1').classList.add('done');
+  document.getElementById('step2').querySelector('.step-number').innerHTML = '1';
+  document.getElementById('step1').querySelector('.step-number').innerHTML = '<i class="bi bi-check" style="font-size:0.75rem"></i>';
+  document.getElementById('analyze-btn').disabled = false;
+}
+
+function disableStep2() {
+  document.getElementById('step2').classList.add('disabled');
+  document.getElementById('step2').classList.remove('active');
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('step1').classList.remove('done');
+  document.getElementById('step1').querySelector('.step-number').textContent = '1';
+  document.getElementById('step2').querySelector('.step-number').textContent = '2';
+  document.getElementById('analyze-btn').disabled = true;
+}
+
+function showStep3Loading() {
+  document.getElementById('step3').classList.remove('disabled');
+  document.getElementById('analyzing-overlay').style.display = 'block';
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('result-placeholder').style.display = 'none';
+}
+
+function showStep3Placeholder() {
+  document.getElementById('analyzing-overlay').style.display = 'none';
+  document.getElementById('result-placeholder').style.display = 'block';
+}
+
+function hideStep3() {
+  document.getElementById('step3').classList.add('disabled');
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('analyzing-overlay').style.display = 'none';
+  document.getElementById('result-placeholder').style.display = 'block';
+}
+
+document.getElementById('analyze-btn').addEventListener('click', analyze);
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  clearAudio();
+  hideStep3();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+</body>
+</html>

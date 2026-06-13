@@ -1,0 +1,16 @@
+CARA PAKAI VERSI FIXED
+
+1. Upload semua isi folder ini ke repository GitHub Pages.
+2. Pastikan struktur folder tetap seperti ini:
+   index.html
+   models/cnn/model.json + file .bin
+   models/cnn_lstm/model.json + file .bin
+   models/rnn/model.json + file .bin
+3. Jangan ubah nama folder models, cnn, cnn_lstm, atau rnn.
+4. Buka halaman GitHub Pages, lalu hard refresh browser: Ctrl + Shift + R.
+5. Jika masih gagal, buka DevTools > Network dan cek apakah model.json dan semua file .bin statusnya 200.
+
+Perbaikan utama:
+- TensorFlow.js runtime dinaikkan ke versi 4.22.0 agar sesuai dengan model yang dikonversi TensorFlow.js Converter v4.22.0.
+- model.json dipatch dari batch_shape menjadi batchInputShape agar InputLayer bisa dibaca oleh TensorFlow.js.
+- dtype Keras 3 DTypePolicy dipatch menjadi float32 agar lebih kompatibel di browser.
